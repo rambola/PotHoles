@@ -9,9 +9,10 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.android.rr.potholes.MainActivity;
 
@@ -19,6 +20,7 @@ import static com.android.rr.potholes.potholesconstants.PotHolesConstants.MY_PER
 
 public class MainActivityPresenter {
     private MainActivity mMainActivity;
+    private final String TAG = MainActivityPresenter.class.getSimpleName();
 
     public MainActivityPresenter (MainActivity mainActivity) {
         mMainActivity = mainActivity;
@@ -98,4 +100,6 @@ public class MainActivityPresenter {
 
         mMainActivity.finishAffinity();
     }
+
+
 }

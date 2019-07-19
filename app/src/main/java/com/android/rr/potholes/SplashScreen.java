@@ -1,8 +1,9 @@
 package com.android.rr.potholes;
 
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.rr.potholes.pothoelsinterfaces.ISplashPresenter;
 import com.android.rr.potholes.presenters.SplashPresenter;
