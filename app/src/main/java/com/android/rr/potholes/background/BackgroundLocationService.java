@@ -3,7 +3,6 @@ package com.android.rr.potholes.background;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +13,8 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.android.rr.potholes.potholesconstants.PotHolesConstants;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -22,7 +23,11 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
-import java.text.SimpleDateFormat;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.DateFormat;
 import java.util.Date;
 
 /**
@@ -46,7 +51,6 @@ public class BackgroundLocationService extends Service implements
     private Boolean servicesAvailable = false;
     private NotificationManager mNotificationManager;
 
-
     public class LocalBinder extends Binder {
         public BackgroundLocationService getServerInstance() {
             return BackgroundLocationService.this;
@@ -56,7 +60,6 @@ public class BackgroundLocationService extends Service implements
     @Override
     public void onCreate() {
         super.onCreate();
-
 
         mInProgress = false;
         // Create the LocationRequest object
@@ -70,13 +73,7 @@ public class BackgroundLocationService extends Service implements
 
         servicesAvailable = servicesConnected();
 
-        /*
-         * Create a new location client, using the enclosing class to
-         * handle callbacks.
-         */
         setUpLocationClientIfNeeded();
-
-        startForeground(12345678, getNotification());
     }
 
     /*
@@ -98,17 +95,39 @@ public class BackgroundLocationService extends Service implements
 
         // If Google Play services is available
         if (ConnectionResult.SUCCESS == resultCode) {
-
             return true;
         } else {
-
             return false;
         }
     }
 
-    public int onStartCommand (Intent intent, int flags, int startId)
-    {
+    public int onStartCommand (@NonNull Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
+
+        if (null != intent.getAction() &&
+                intent.getAction().equals(PotHolesConstants.ACTION_START_SERVICE)) {
+            PotHolesConstants.isLocationServiceRunning = true;
+            if (null != mNotificationManager)
+                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
+            startForeground(PotHolesConstants.FOREGROUND_NOTIFICATION_ID, getNotification());
+        } else if (null != intent.getAction() && intent.getAction().equals(
+                PotHolesConstants.ACTION_SHOW_FOREGROUND_NOTIFICATION)) {
+            if (null != mNotificationManager)
+                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
+            startForeground(PotHolesConstants.FOREGROUND_NOTIFICATION_ID, getNotification());
+        } else if (null != intent.getAction() && intent.getAction().equals(
+                PotHolesConstants.ACTION_DISMISS_FOREGROUND_NOTIFICATION)) {
+            if (null != mNotificationManager)
+                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
+        } else {
+            if (null != intent.getAction() &&
+                    intent.getAction().equals(PotHolesConstants.ACTION_STOP_SERVICE)) {
+                PotHolesConstants.isLocationServiceRunning = false;
+                stopForegroundService();
+
+                return START_NOT_STICKY;
+            }
+        }
 
         PowerManager mgr = (PowerManager)getSystemService(Context.POWER_SERVICE);
 
@@ -139,8 +158,7 @@ public class BackgroundLocationService extends Service implements
     }
 
 
-    private void setUpLocationClientIfNeeded()
-    {
+    private void setUpLocationClientIfNeeded() {
         if(mGoogleApiClient == null)
             buildGoogleApiClient();
     }
@@ -149,9 +167,8 @@ public class BackgroundLocationService extends Service implements
     @Override
     public void onLocationChanged(Location location) {
         // Report to the UI that the location was updated
-        String msg = Double.toString(location.getLatitude()) + "," +
-                Double.toString(location.getLongitude());
-        Log.d("debug", msg);
+        String msg = location.getLatitude() + "," + location.getLongitude();
+        Log.i("debug", DateFormat.getDateTimeInstance().format(new Date()) + ":" + msg);
         // Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
         //appendLog(DateFormat.getDateTimeInstance().format(new Date()) + ":" + msg, Constants.LOCATION_FILE);
     }
@@ -166,37 +183,54 @@ public class BackgroundLocationService extends Service implements
         return mDateFormat.format(new Date());
     }*/
 
-    /*public void appendLog(String text, String filename)
-    {
+    public void appendLog(String text, String filename) {
         File logFile = new File(filename);
-        if (!logFile.exists())
-        {
-            try
-            {
+        if (!logFile.exists()) {
+            try {
                 logFile.createNewFile();
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
-        try
-        {
+        try {
             //BufferedWriter for performance, true to set append to file flag
             BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
             buf.append(text);
             buf.newLine();
             buf.close();
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-    }*/
+    }
 
-    @Override
+    private void stopForegroundService() {
+        // Turn off the request flag
+        this.mInProgress = false;
+
+        if (this.servicesAvailable && this.mGoogleApiClient != null) {
+            this.mGoogleApiClient.unregisterConnectionCallbacks(this);
+            this.mGoogleApiClient.unregisterConnectionFailedListener(this);
+            this.mGoogleApiClient.disconnect();
+            // Destroy the current location client
+            this.mGoogleApiClient = null;
+        }
+        // Display the connection status
+        // Toast.makeText(this, DateFormat.getDateTimeInstance().format(new Date()) + ":
+        // Disconnected. Please re-connect.", Toast.LENGTH_SHORT).show();
+        if (this.mWakeLock != null) {
+            this.mWakeLock.release();
+            this.mWakeLock = null;
+        }
+
+        if (null != mNotificationManager)
+            mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
+        stopForeground(true);
+        stopSelf();
+    }
+
+    /*@Override
     public void onDestroy() {
         // Turn off the request flag
         this.mInProgress = false;
@@ -211,7 +245,6 @@ public class BackgroundLocationService extends Service implements
         // Display the connection status
         // Toast.makeText(this, DateFormat.getDateTimeInstance().format(new Date()) + ":
         // Disconnected. Please re-connect.", Toast.LENGTH_SHORT).show();
-
         if (this.mWakeLock != null) {
             this.mWakeLock.release();
             this.mWakeLock = null;
@@ -219,9 +252,10 @@ public class BackgroundLocationService extends Service implements
 
         super.onDestroy();
 
-        mNotificationManager.cancel(12345678);
+        mNotificationManager.cancel(PotHoles.FOREGROUND_NOTIFICATION_ID);
         stopForeground(true);
-    }
+    }*/
+
     /*
      * Called by Location Services when the request to connect the
      * client finishes successfully. At this point, you can
