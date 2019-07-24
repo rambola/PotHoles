@@ -5,27 +5,54 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity"
-    android:gravity="center">
+    android:gravity="center"
+    android:layout_margin="11dp">
 
-    <Button
-        android:id="@+id/startServiceBtn"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/locationLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Location Updates" />
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/startLocationServiceBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start Location Updates"
+            android:layout_weight="1"/>
 
-    <Button
-        android:id="@+id/stopServiceBtn"
-        android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/stopLocationServiceBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stop Location Updates"
+            android:layout_weight="1"/>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/accelerationLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Stop Location Updates"
-        android:layout_below="@+id/startServiceBtn"
-        android:layout_marginTop="11dp"/>
+        android:layout_below="@id/locationLayout"
+        android:layout_marginTop="11dp">
+        <Button
+            android:id="@+id/startAccelerationServiceBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start Acceleration Updates"
+            android:layout_weight="1"/>
 
+        <Button
+            android:id="@+id/stopAccelerationServiceBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stop Acceleration Updates"
+            android:layout_weight="1"/>
+    </LinearLayout>
     <Button
         android:id="@+id/writeToCSVFileBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Write to File"
-        android:layout_below="@+id/stopServiceBtn"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/accelerationLayout"
         android:layout_marginTop="11dp"/>
 </RelativeLayout>

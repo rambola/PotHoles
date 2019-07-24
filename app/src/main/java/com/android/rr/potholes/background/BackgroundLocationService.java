@@ -50,6 +50,7 @@ public class BackgroundLocationService extends Service implements
 
     private Boolean servicesAvailable = false;
     private NotificationManager mNotificationManager;
+    private final String TAG = BackgroundLocationService.class.getSimpleName();
 
     public class LocalBinder extends Binder {
         public BackgroundLocationService getServerInstance() {
@@ -65,7 +66,7 @@ public class BackgroundLocationService extends Service implements
         // Create the LocationRequest object
         mLocationRequest = LocationRequest.create();
         // Use high accuracy
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         // Set the update interval to 5 seconds
         mLocationRequest.setInterval(PotHolesConstants.LOCATION_INTERVAL);
         // Set the fastest update interval to 1 second
@@ -105,23 +106,23 @@ public class BackgroundLocationService extends Service implements
         super.onStartCommand(intent, flags, startId);
 
         if (null != intent.getAction() &&
-                intent.getAction().equals(PotHolesConstants.ACTION_START_SERVICE)) {
+                intent.getAction().equals(PotHolesConstants.ACTION_START_LOCATION_SERVICE)) {
             PotHolesConstants.isLocationServiceRunning = true;
             if (null != mNotificationManager)
-                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
-            startForeground(PotHolesConstants.FOREGROUND_NOTIFICATION_ID, getNotification());
+                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
+            startForeground(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID, getNotification());
         } else if (null != intent.getAction() && intent.getAction().equals(
                 PotHolesConstants.ACTION_SHOW_FOREGROUND_NOTIFICATION)) {
             if (null != mNotificationManager)
-                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
-            startForeground(PotHolesConstants.FOREGROUND_NOTIFICATION_ID, getNotification());
+                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
+            startForeground(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID, getNotification());
         } else if (null != intent.getAction() && intent.getAction().equals(
                 PotHolesConstants.ACTION_DISMISS_FOREGROUND_NOTIFICATION)) {
             if (null != mNotificationManager)
-                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
+                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
         } else {
             if (null != intent.getAction() &&
-                    intent.getAction().equals(PotHolesConstants.ACTION_STOP_SERVICE)) {
+                    intent.getAction().equals(PotHolesConstants.ACTION_STOP_LOCATION_SERVICE)) {
                 PotHolesConstants.isLocationServiceRunning = false;
                 stopForegroundService();
 
@@ -156,7 +157,6 @@ public class BackgroundLocationService extends Service implements
 
         return START_STICKY;
     }
-
 
     private void setUpLocationClientIfNeeded() {
         if(mGoogleApiClient == null)
@@ -225,7 +225,7 @@ public class BackgroundLocationService extends Service implements
         }
 
         if (null != mNotificationManager)
-            mNotificationManager.cancel(PotHolesConstants.FOREGROUND_NOTIFICATION_ID);
+            mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
         stopForeground(true);
         stopSelf();
     }
@@ -252,7 +252,7 @@ public class BackgroundLocationService extends Service implements
 
         super.onDestroy();
 
-        mNotificationManager.cancel(PotHoles.FOREGROUND_NOTIFICATION_ID);
+        mNotificationManager.cancel(PotHoles.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
         stopForeground(true);
     }*/
 
@@ -264,10 +264,10 @@ public class BackgroundLocationService extends Service implements
     @Override
     @SuppressWarnings("MissingPermission")
     public void onConnected(Bundle bundle) {
-
+        Log.e(TAG, "onConnected.... is called..");
         // Request location updates using static settings
-        Intent intent = new Intent(this, LocationReceiver.class);
-        LocationServices.FusedLocationApi.requestLocationUpdates(this.mGoogleApiClient,
+        //Intent intent = new Intent(this, LocationReceiver.class);
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,
                 mLocationRequest, this); // This is the changed line.
         //appendLog(DateFormat.getDateTimeInstance().format(new Date()) + ": Connected", Constants.LOG_FILE);
 //        PendingIntent pendingIntent = PendingIntent
@@ -283,6 +283,7 @@ public class BackgroundLocationService extends Service implements
      */
     @Override
     public void onConnectionSuspended(int i) {
+        Log.e(TAG, "onConnectionSuspended.... is called..");
         // Turn off the request flag
         mInProgress = false;
         // Destroy the current location client
@@ -298,6 +299,7 @@ public class BackgroundLocationService extends Service implements
      */
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.e(TAG, "onConnectionFailed.... is called..");
         mInProgress = false;
 
         /*
@@ -326,6 +328,7 @@ public class BackgroundLocationService extends Service implements
 
         Notification.Builder builder = new Notification.Builder(getApplicationContext(), "channel_01");
         //builder.setPriority(Notification.PRIORITY_MIN);
+        builder.setOngoing(true);
 
         return builder.build();
     }

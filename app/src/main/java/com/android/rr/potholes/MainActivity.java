@@ -1,10 +1,7 @@
 package com.android.rr.potholes;
 
-import android.Manifest;
-import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -16,8 +13,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
+import com.android.rr.potholes.background.BackgroundAcceleratorService;
 import com.android.rr.potholes.background.BackgroundLocationService;
 import com.android.rr.potholes.potholesconstants.PotHolesConstants;
 import com.android.rr.potholes.presenters.MainActivityPresenter;
@@ -25,11 +22,10 @@ import com.android.rr.potholes.presenters.MainActivityPresenter;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.android.rr.potholes.potholesconstants.PotHolesConstants.MY_PERMISSIONS_REQUEST_LOCATION;
-
 public class MainActivity extends AppCompatActivity {
 
     private Intent mLocationServiceIntent;
+    private Intent mAccelerometerServiceIntent;
     private MainActivityPresenter mMainActivityPresenter;
     private boolean isLocationEnabled;
     private boolean isPermissionEnabled;
@@ -42,19 +38,22 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mMainActivityPresenter = new MainActivityPresenter(MainActivity.this);
-        mLocationServiceIntent = new Intent(MainActivity.this,
-                BackgroundLocationService.class);
 
         //show error dialog if GoolglePlayServices not available
         if (!mMainActivityPresenter.isGooglePlayServicesAvailable()) {
             finishAffinity();
         }
 
+        mLocationServiceIntent = new Intent(getApplicationContext(),
+                BackgroundLocationService.class);
+        mAccelerometerServiceIntent = new Intent(getApplicationContext(),
+                BackgroundAcceleratorService.class);
+
         isPermissionEnabled = mMainActivityPresenter.checkAndRequestPermissions();
 
         Log.i(TAG, "isPermissionEnabled: "+isPermissionEnabled);
 
-        findViewById(R.id.startServiceBtn).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.startLocationServiceBtn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (isPermissionEnabled) {
@@ -63,16 +62,30 @@ public class MainActivity extends AppCompatActivity {
                     if (!isLocationEnabled) {
                         mMainActivityPresenter.showDialogForGPSOn();
                     } else {
-                        startLocationService();
+                        startOrStopLocationService(PotHolesConstants.ACTION_START_LOCATION_SERVICE);
                     }
                 }
             }
         });
 
-        findViewById(R.id.stopServiceBtn).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.stopLocationServiceBtn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                stopLocationService();
+                startOrStopLocationService(PotHolesConstants.ACTION_STOP_LOCATION_SERVICE);
+            }
+        });
+
+        findViewById(R.id.startAccelerationServiceBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startOrStopAccelerometerService(PotHolesConstants.ACTION_START_ACCELEROMETER_SENSOR);
+            }
+        });
+
+        findViewById(R.id.stopAccelerationServiceBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startOrStopAccelerometerService(PotHolesConstants.ACTION_STOP_ACCELEROMETER_SENSOR);
             }
         });
 
@@ -155,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
                 if (!isLocationEnabled) {
                     mMainActivityPresenter.showDialogForGPSOn();
                 } else {
-                    startLocationService();
+                    startOrStopLocationService(PotHolesConstants.ACTION_START_LOCATION_SERVICE);
                 }
             } else {
                 for (Map.Entry<String, Integer> entry : permissionsResults.entrySet()) {
@@ -231,12 +244,12 @@ public class MainActivity extends AppCompatActivity {
         //return  mAlertDialog;
     }
 
-    private void startLocationService() {
+    /*private void startLocationService() {
 //        PendingResult<Status> pendingResult = LocationServices.FusedLocationApi.requestLocationUpdates(
 //                mGoogleApiClient, mLocationRequest, this);
         Log.d(TAG, "Location update started ..............: ");
 
-        /*ComponentName comp = new ComponentName(getPackageName(), BackgroundLocationService.class.getName());
+        *//*ComponentName comp = new ComponentName(getPackageName(), BackgroundLocationService.class.getName());
         ComponentName service;
         if (Build.VERSION.SDK_INT >= 26)
             service = startForegroundService(new Intent().setComponent(comp));
@@ -246,23 +259,46 @@ public class MainActivity extends AppCompatActivity {
         if (null == service){
             // something really wrong here
             Log.e(TAG, "Could not start service " + comp.toString());
-        }*/
+        }*//*
 
-        if (!PotHolesConstants.isLocationServiceRunning) {
-            mLocationServiceIntent.setAction(PotHolesConstants.ACTION_START_SERVICE);
+        *//*if (!PotHolesConstants.isLocationServiceRunning) {
+            mLocationServiceIntent.setAction(PotHolesConstants.ACTION_START_LOCATION_SERVICE);
             startForegroundService(mLocationServiceIntent);
             Toast.makeText(MainActivity.this, "Location updates is started.",
                     Toast.LENGTH_SHORT).show();
-        }
-    }
+        }*//*
+    }*/
 
-    private void stopLocationService () {
-        if (PotHolesConstants.isLocationServiceRunning) {
-            mLocationServiceIntent.setAction(PotHolesConstants.ACTION_STOP_SERVICE);
-            startForegroundService(mLocationServiceIntent);
+    private void startOrStopLocationService (String action) {
+        Log.e(TAG, "startOrStopLocationService... action: "+action+
+                ", isLocationServiceRunning: "+PotHolesConstants.isLocationServiceRunning);
+        if (!PotHolesConstants.isLocationServiceRunning) {
+            mLocationServiceIntent.setAction(action);
+            Toast.makeText(MainActivity.this, "Location updates is started.",
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            mLocationServiceIntent.setAction(action);
             Toast.makeText(MainActivity.this, "Location updates is stopped.",
                     Toast.LENGTH_SHORT).show();
         }
+
+        startForegroundService(mLocationServiceIntent);
+    }
+
+    private void startOrStopAccelerometerService(String action) {
+        Log.e(TAG, "startOrStopAccelerometerService... action: "+action+
+                ", isAccelerometerServiceRunning: "+PotHolesConstants.isAccelerometerServiceRunning);
+        if (!PotHolesConstants.isAccelerometerServiceRunning) {
+            mAccelerometerServiceIntent.setAction(action);
+            Toast.makeText(MainActivity.this, "Accelerometer sensor updates is started.",
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            mAccelerometerServiceIntent.setAction(action);
+            Toast.makeText(MainActivity.this, "Accelerometer sensor updates is stopped.",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        startForegroundService(mAccelerometerServiceIntent);
     }
 
 }
