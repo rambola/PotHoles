@@ -33,6 +33,12 @@ public class MainActivity extends AppCompatActivity {
             mMainActivityPresenter.showToast(getString(R.string.google_play_services_not_available));
             finishAffinity();
         }
+        boolean isPermissionEnabled = mMainActivityPresenter.checkAndRequestPermissions();
+        Log.i(TAG, "isPermissionEnabled: "+isPermissionEnabled);
+
+        if (isPermissionEnabled)
+            mMainActivityPresenter.checkGPSOnAndStartService();
+
         findViewById(R.id.startLocationServiceBtn).setOnClickListener(mMainActivityPresenter);
         findViewById(R.id.stopLocationServiceBtn).setOnClickListener(mMainActivityPresenter);
         findViewById(R.id.startAccelerationServiceBtn).setOnClickListener(mMainActivityPresenter);

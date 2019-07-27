@@ -72,6 +72,9 @@ public class BackgroundLocationService extends Service implements
 
         servicesAvailable = servicesConnected();
 
+        startForeground(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID,
+                getNotification());
+
         setUpLocationClientIfNeeded();
     }
 
@@ -103,8 +106,6 @@ public class BackgroundLocationService extends Service implements
             if (null != mNotificationManager)
                 mNotificationManager.cancel(
                         PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
-            startForeground(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID,
-                    getNotification());
         } else {
             if (null != intent.getAction() &&
                     intent.getAction().equals(PotHolesConstants.ACTION_STOP_LOCATION_SERVICE)) {

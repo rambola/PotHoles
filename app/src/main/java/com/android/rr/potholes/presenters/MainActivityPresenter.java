@@ -40,8 +40,9 @@ public class MainActivityPresenter implements View.OnClickListener {
     private Intent mAccelerometerServiceIntent;
     private androidx.appcompat.app.AlertDialog mAlertDialog;
     private ExportDataToCSVTask mExportDataToCSVTask;
-
+    private boolean isStartLocationServiceClicked;
     private final String TAG = MainActivityPresenter.class.getSimpleName();
+
     private String[] mAppPermissions = {
         Manifest.permission.READ_EXTERNAL_STORAGE,
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -134,6 +135,7 @@ public class MainActivityPresenter implements View.OnClickListener {
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.startLocationServiceBtn:
+                isStartLocationServiceClicked = true;
                 boolean isPermissionEnabled = checkAndRequestPermissions();
                 Log.i(TAG, "isPermissionEnabled: "+isPermissionEnabled);
                 if (isPermissionEnabled) {
@@ -141,6 +143,7 @@ public class MainActivityPresenter implements View.OnClickListener {
                 }
                 break;
             case R.id.stopLocationServiceBtn:
+                isStartLocationServiceClicked = false;
                 startOrStopLocationService(PotHolesConstants.ACTION_STOP_LOCATION_SERVICE);
                 break;
             case R.id.startAccelerationServiceBtn:
@@ -173,10 +176,11 @@ public class MainActivityPresenter implements View.OnClickListener {
         NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
         boolean  dataConnectionAvailable = (null != activeNetwork && activeNetwork.isConnected());
         Log.e(TAG, "checkForNetworkConnectionAndStartService... dataConnectionAvailable: "+
-                dataConnectionAvailable);
-        if (dataConnectionAvailable)
+                dataConnectionAvailable+", isStartLocationServiceClicked: "
+                +isStartLocationServiceClicked);
+        if (dataConnectionAvailable && isStartLocationServiceClicked)
             startOrStopLocationService(PotHolesConstants.ACTION_START_LOCATION_SERVICE);
-        else
+        else if (!dataConnectionAvailable)
             showDialogForNetworkConnection();
     }
 
@@ -216,12 +220,14 @@ public class MainActivityPresenter implements View.OnClickListener {
         if (!PotHolesConstants.isLocationServiceRunning &&
                 action.equals(PotHolesConstants.ACTION_START_LOCATION_SERVICE)) {
             mLocationServiceIntent.setAction(action);
+            mMainActivity.startForegroundService(mLocationServiceIntent);
             showToast("Location updates is started.");
-        } else {
+        } else if (PotHolesConstants.isLocationServiceRunning &&
+                action.equals(PotHolesConstants.ACTION_STOP_LOCATION_SERVICE)) {
             mLocationServiceIntent.setAction(action);
+            mMainActivity.startForegroundService(mLocationServiceIntent);
             showToast("Location updates is stopped.");
         }
-        mMainActivity.startForegroundService(mLocationServiceIntent);
     }
 
     private void startOrStopAccelerometerService(String action) {
@@ -230,12 +236,14 @@ public class MainActivityPresenter implements View.OnClickListener {
         if (!PotHolesConstants.isAccelerometerServiceRunning &&
                 action.equals(PotHolesConstants.ACTION_START_ACCELEROMETER_SENSOR)) {
             mAccelerometerServiceIntent.setAction(action);
+            mMainActivity.startForegroundService(mAccelerometerServiceIntent);
             showToast("Accelerometer sensor updates is started.");
-        } else {
+        } else if (PotHolesConstants.isAccelerometerServiceRunning &&
+                action.equals(PotHolesConstants.ACTION_STOP_ACCELEROMETER_SENSOR)) {
             mAccelerometerServiceIntent.setAction(action);
+            mMainActivity.startForegroundService(mAccelerometerServiceIntent);
             showToast("Accelerometer sensor updates is stopped.");
         }
-        mMainActivity.startForegroundService(mAccelerometerServiceIntent);
     }
 
     public void goToSettingsApp () {
@@ -321,6 +329,8 @@ public class MainActivityPresenter implements View.OnClickListener {
 
             shareIntent.setType("application/csv");
             mMainActivity.startActivity(Intent.createChooser(shareIntent, "Share Data"));
+        } else {
+            showToast(mMainActivity.getString(R.string.no_data_to_share));
         }
     }
 
