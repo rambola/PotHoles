@@ -17,16 +17,17 @@
             android:id="@+id/startLocationServiceBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Start Location Updates"
+            android:text="@string/start_location_updates"
             android:layout_weight="1"/>
 
         <Button
             android:id="@+id/stopLocationServiceBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Stop Location Updates"
+            android:text="@string/stop_location_updates"
             android:layout_weight="1"/>
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/accelerationLayout"
         android:layout_width="match_parent"
@@ -37,22 +38,35 @@
             android:id="@+id/startAccelerationServiceBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Start Acceleration Updates"
+            android:text="@string/start_accelerometer_updates"
             android:layout_weight="1"/>
 
         <Button
             android:id="@+id/stopAccelerationServiceBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Stop Acceleration Updates"
+            android:text="@string/stop_accelerometer_updates"
             android:layout_weight="1"/>
     </LinearLayout>
-    <Button
-        android:id="@+id/writeToCSVFileBtn"
-        android:layout_width="wrap_content"
+
+    <LinearLayout
+        android:id="@+id/filesLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Write to File"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@+id/accelerationLayout"
-        android:layout_marginTop="11dp"/>
+        android:layout_below="@id/accelerationLayout"
+        android:layout_marginTop="11dp">
+        <Button
+            android:id="@+id/writeToCSVFileBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/write_to_file"
+            android:layout_weight="1"/>
+        <Button
+            android:id="@+id/shareFilesBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/shareFiles"
+            android:layout_weight="1"/>
+    </LinearLayout>
+
 </RelativeLayout>

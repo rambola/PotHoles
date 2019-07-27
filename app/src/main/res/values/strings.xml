@@ -1,3 +1,30 @@
 <resources>
     <string name="app_name">PotHoles</string>
+    <string name="app_requiresPermissions">This app requires Location and Storage permissions to work without any problem</string>
+    <string name="yes_grant">Yes, Grant Permissions</string>
+    <string name="no_exit">No, Exit App</string>
+    <string name="you_have_denied">You have denied some permissions. Allow all permissions at [Settings] > [Permissions]</string>
+    <string name="goto_settings">Goto Settings</string>
+    <string name="google_play_services_not_available">Device does not have Google Play Services, exiting PotHoles</string>
+    <string name="no_data_found">No data found</string>
+    <string name="no_location_updates">No Location updates data found</string>
+    <string name="no_accelerometer_updates">No Accelerometer sensor data found</string>
+    <string name="unable_to_create_file">Something went wrong. Unable to create file</string>
+    <string name="something_wrong">Something went wrong. Try again</string>
+    <string name="data_export_success">Data exported successfully. File(s) saved to PotHoles folder in device storage</string>
+    <string name="exporting_data">Exporting your data. Please wait....</string>
+    <string name="exporting_cancelled">Exporting data is cancelled</string>
+    <string name="yes_goto_settings">Yes, Goto Settings</string>
+    <string name="enable_location_gps">Please Enable Location/GPS and make Location mode to HIGH ACCURACY for better result and try starting location updates....</string>
+    <string name="please_enable_location_gps">Please enable Location/GPS and Connect to any network data to get accurate location updates....</string>
+    <string name="no_internet">No internet connection found. Please connect to any network and try starting location updates....</string>
+    <!--<string name="turn_on_mobile_data">Turn on Mobile data</string>
+    <string name="check_for_wifi">Check for Wi-Fi</string>-->
+    <string name="shareFiles">Share Files</string>
+    <string name="write_to_file">Write to File</string>
+    <string name="start_accelerometer_updates">Start Acceleration Updates</string>
+    <string name="stop_accelerometer_updates">Stop Acceleration Updates</string>
+    <string name="start_location_updates">Star Location Updates</string>
+    <string name="stop_location_updates">Stop Location Updates</string>
+    <string name="no_data_to_share">No data to share</string>
 </resources>

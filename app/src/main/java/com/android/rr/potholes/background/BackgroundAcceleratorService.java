@@ -10,6 +10,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -18,10 +19,14 @@ import androidx.annotation.Nullable;
 
 import com.android.rr.potholes.potholesconstants.PotHolesConstants;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Date;
+
 public class BackgroundAcceleratorService extends Service implements SensorEventListener {
     private final String TAG = BackgroundAcceleratorService.class.getSimpleName();
     private SensorManager mSensorManager;
-    //private Sensor mAccelerometerSensor;
     private NotificationManager mNotificationManager;
     private long mLastUpdatedTime = 0;
 
@@ -34,20 +39,22 @@ public class BackgroundAcceleratorService extends Service implements SensorEvent
     @Override
     public void onCreate() {
         super.onCreate();
-
-        startForeground(PotHolesConstants.FOREGROUND_ACCELEROMETER_SERVICE_NOTIFICATION_ID, getNotification());
+        startForeground(PotHolesConstants.FOREGROUND_ACCELEROMETER_SERVICE_NOTIFICATION_ID,
+                getNotification());
     }
 
     @Override
     public int onStartCommand(@NonNull Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         Log.e(TAG, "onStartCommand... intent action: "+intent.getAction());
-        if (intent.getAction().equals(PotHolesConstants.ACTION_START_ACCELEROMETER_SENSOR)) {
+        if (null != intent.getAction() && intent.getAction().equals(
+                PotHolesConstants.ACTION_START_ACCELEROMETER_SENSOR)) {
             if (null != mNotificationManager)
-                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_ACCELEROMETER_SERVICE_NOTIFICATION_ID);
-
+                mNotificationManager.cancel(
+                        PotHolesConstants.FOREGROUND_ACCELEROMETER_SERVICE_NOTIFICATION_ID);
             startForegroundAccelerometerService();
-        } else if (intent.getAction().equals(PotHolesConstants.ACTION_STOP_ACCELEROMETER_SENSOR)) {
+        } else if (null != intent.getAction() && intent.getAction().equals(
+                PotHolesConstants.ACTION_STOP_ACCELEROMETER_SENSOR)) {
             stopForegroundAccelerometerService();
         }
 
@@ -56,7 +63,6 @@ public class BackgroundAcceleratorService extends Service implements SensorEvent
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-//        Log.e(TAG, "onSensorChanged.... sensorType: "+event.sensor.getType());
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             getAccelerometer(event);
         }
@@ -64,7 +70,8 @@ public class BackgroundAcceleratorService extends Service implements SensorEvent
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        Log.e(TAG, "onAccuracyChanged.... sensorType: "+sensor.getName()+", accuracy: "+accuracy);
+        Log.e(TAG, "onAccuracyChanged.... sensorType: "+sensor.getName()+
+                ", accuracy: "+accuracy);
     }
 
     private void startForegroundAccelerometerService () {
@@ -78,18 +85,17 @@ public class BackgroundAcceleratorService extends Service implements SensorEvent
 
     private void stopForegroundAccelerometerService () {
         PotHolesConstants.isAccelerometerServiceRunning = false;
-
         if (null != mSensorManager)
             mSensorManager.unregisterListener(this);
         if (null != mNotificationManager)
-            mNotificationManager.cancel(PotHolesConstants.FOREGROUND_ACCELEROMETER_SERVICE_NOTIFICATION_ID);
+            mNotificationManager.cancel(
+                    PotHolesConstants.FOREGROUND_ACCELEROMETER_SERVICE_NOTIFICATION_ID);
 
         stopForeground(true);
         stopSelf();
     }
 
     private void getAccelerometer(SensorEvent event) {
-
         /*float[] values = event.values;
 
         float x = values[0];
@@ -122,7 +128,12 @@ public class BackgroundAcceleratorService extends Service implements SensorEvent
         float zVal = event.values[2];
 
         mLastUpdatedTime = currentTimeInMills;
-        Log.e(TAG, "getAccelerometer.... xVal: "+xVal+", yVal: "+yVal+", zVal: "+zVal);
+
+        String locationUpdate = android.text.format.DateFormat.format(
+                "dd-MM-yyyy HH:mm:ss", new Date()).toString() + ", " +
+                xVal + ", " + yVal + ", " +zVal;
+        Log.i("debug", locationUpdate);
+        writeToFile( locationUpdate);
     }
 
     private Notification getNotification() {
@@ -141,4 +152,27 @@ public class BackgroundAcceleratorService extends Service implements SensorEvent
 
         return builder.build();
     }
+
+    public void writeToFile(String locationData) {
+        File myDirectory = new File(Environment.getExternalStorageDirectory(),
+                PotHolesConstants.POTHOLES_FOLDER_NAME);
+
+        if (!myDirectory.exists()) {
+            myDirectory.mkdir();
+        }
+
+        if (myDirectory.exists()) {
+            File file = new File(myDirectory, PotHolesConstants.ACCELEROMETER_UPDATES_FILE_NAME);
+            FileWriter writer;
+            try {
+                writer = new FileWriter(file, true);
+                writer.append(locationData+"\n");
+                writer.flush();
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }

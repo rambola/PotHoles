@@ -9,9 +9,11 @@ import android.content.Intent;
 import android.location.Location;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
@@ -27,6 +29,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.text.DateFormat;
 import java.util.Date;
 
@@ -43,10 +46,7 @@ public class BackgroundLocationService extends Service implements
     IBinder mBinder = new LocalBinder();
 
     private GoogleApiClient mGoogleApiClient;
-    private PowerManager.WakeLock mWakeLock;
     private LocationRequest mLocationRequest;
-    // Flag that indicates if a request is underway.
-    private boolean mInProgress;
 
     private Boolean servicesAvailable = false;
     private NotificationManager mNotificationManager;
@@ -61,8 +61,6 @@ public class BackgroundLocationService extends Service implements
     @Override
     public void onCreate() {
         super.onCreate();
-
-        mInProgress = false;
         // Create the LocationRequest object
         mLocationRequest = LocationRequest.create();
         // Use high accuracy
@@ -90,16 +88,10 @@ public class BackgroundLocationService extends Service implements
     }
 
     private boolean servicesConnected() {
-
         // Check that Google Play services is available
         int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-
         // If Google Play services is available
-        if (ConnectionResult.SUCCESS == resultCode) {
-            return true;
-        } else {
-            return false;
-        }
+        return ConnectionResult.SUCCESS == resultCode;
     }
 
     public int onStartCommand (@NonNull Intent intent, int flags, int startId) {
@@ -109,17 +101,10 @@ public class BackgroundLocationService extends Service implements
                 intent.getAction().equals(PotHolesConstants.ACTION_START_LOCATION_SERVICE)) {
             PotHolesConstants.isLocationServiceRunning = true;
             if (null != mNotificationManager)
-                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
-            startForeground(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID, getNotification());
-        } else if (null != intent.getAction() && intent.getAction().equals(
-                PotHolesConstants.ACTION_SHOW_FOREGROUND_NOTIFICATION)) {
-            if (null != mNotificationManager)
-                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
-            startForeground(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID, getNotification());
-        } else if (null != intent.getAction() && intent.getAction().equals(
-                PotHolesConstants.ACTION_DISMISS_FOREGROUND_NOTIFICATION)) {
-            if (null != mNotificationManager)
-                mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
+                mNotificationManager.cancel(
+                        PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
+            startForeground(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID,
+                    getNotification());
         } else {
             if (null != intent.getAction() &&
                     intent.getAction().equals(PotHolesConstants.ACTION_STOP_LOCATION_SERVICE)) {
@@ -130,28 +115,8 @@ public class BackgroundLocationService extends Service implements
             }
         }
 
-        PowerManager mgr = (PowerManager)getSystemService(Context.POWER_SERVICE);
-
-        /*
-        WakeLock is reference counted so we don't want to create multiple WakeLocks. So do a check before initializing and acquiring.
-        This will fix the "java.lang.Exception: WakeLock finalized while still held: MyWakeLock" error that you may find.
-        */
-        if (this.mWakeLock == null) { //**Added this
-            this.mWakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PotHoles:WakeLock");
-        }
-
-        if (!this.mWakeLock.isHeld()) { //**Added this
-            this.mWakeLock.acquire();
-        }
-
-        if(!servicesAvailable || mGoogleApiClient.isConnected() || mInProgress)
-            return START_STICKY;
-
         setUpLocationClientIfNeeded();
-        if(!mGoogleApiClient.isConnected() || !mGoogleApiClient.isConnecting() && !mInProgress)
-        {
-            //appendLog(DateFormat.getDateTimeInstance().format(new Date()) + ": Started", Constants.LOG_FILE);
-            mInProgress = true;
+        if(!mGoogleApiClient.isConnected() || !mGoogleApiClient.isConnecting()) {
             mGoogleApiClient.connect();
         }
 
@@ -166,11 +131,11 @@ public class BackgroundLocationService extends Service implements
     // Define the callback method that receives location updates
     @Override
     public void onLocationChanged(Location location) {
-        // Report to the UI that the location was updated
-        String msg = location.getLatitude() + "," + location.getLongitude();
-        Log.i("debug", DateFormat.getDateTimeInstance().format(new Date()) + ":" + msg);
-        // Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-        //appendLog(DateFormat.getDateTimeInstance().format(new Date()) + ":" + msg, Constants.LOCATION_FILE);
+        String locationUpdate = android.text.format.DateFormat.format(
+                "dd-MM-yyyy HH:mm:ss", new Date()).toString() + ", " +
+                location.getLatitude() + ", " + location.getLongitude();
+        Log.i("debug", locationUpdate);
+        writeToFile( locationUpdate);
     }
 
     @Override
@@ -178,83 +143,42 @@ public class BackgroundLocationService extends Service implements
         return mBinder;
     }
 
-    /*public String getTime() {
-        SimpleDateFormat mDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return mDateFormat.format(new Date());
-    }*/
+    public void writeToFile(String locationData) {
+        File myDirectory = new File(Environment.getExternalStorageDirectory(),
+                PotHolesConstants.POTHOLES_FOLDER_NAME);
 
-    public void appendLog(String text, String filename) {
-        File logFile = new File(filename);
-        if (!logFile.exists()) {
+        if (!myDirectory.exists()) {
+            myDirectory.mkdir();
+        }
+
+        if (myDirectory.exists()) {
+            File file = new File(myDirectory, PotHolesConstants.LOCATION_UPDATES_FILE_NAME);
+            FileWriter writer;
             try {
-                logFile.createNewFile();
+                writer = new FileWriter(file, true);
+                writer.append(locationData+"\n");
+                writer.flush();
+                writer.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-        }
-        try {
-            //BufferedWriter for performance, true to set append to file flag
-            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
-            buf.append(text);
-            buf.newLine();
-            buf.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         }
     }
 
     private void stopForegroundService() {
-        // Turn off the request flag
-        this.mInProgress = false;
-
         if (this.servicesAvailable && this.mGoogleApiClient != null) {
             this.mGoogleApiClient.unregisterConnectionCallbacks(this);
             this.mGoogleApiClient.unregisterConnectionFailedListener(this);
             this.mGoogleApiClient.disconnect();
-            // Destroy the current location client
             this.mGoogleApiClient = null;
-        }
-        // Display the connection status
-        // Toast.makeText(this, DateFormat.getDateTimeInstance().format(new Date()) + ":
-        // Disconnected. Please re-connect.", Toast.LENGTH_SHORT).show();
-        if (this.mWakeLock != null) {
-            this.mWakeLock.release();
-            this.mWakeLock = null;
         }
 
         if (null != mNotificationManager)
-            mNotificationManager.cancel(PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
+            mNotificationManager.cancel(
+                    PotHolesConstants.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
         stopForeground(true);
         stopSelf();
     }
-
-    /*@Override
-    public void onDestroy() {
-        // Turn off the request flag
-        this.mInProgress = false;
-
-        if (this.servicesAvailable && this.mGoogleApiClient != null) {
-            this.mGoogleApiClient.unregisterConnectionCallbacks(this);
-            this.mGoogleApiClient.unregisterConnectionFailedListener(this);
-            this.mGoogleApiClient.disconnect();
-            // Destroy the current location client
-            this.mGoogleApiClient = null;
-        }
-        // Display the connection status
-        // Toast.makeText(this, DateFormat.getDateTimeInstance().format(new Date()) + ":
-        // Disconnected. Please re-connect.", Toast.LENGTH_SHORT).show();
-        if (this.mWakeLock != null) {
-            this.mWakeLock.release();
-            this.mWakeLock = null;
-        }
-
-        super.onDestroy();
-
-        mNotificationManager.cancel(PotHoles.FOREGROUND_LOCATION_SERVICE_NOTIFICATION_ID);
-        stopForeground(true);
-    }*/
 
     /*
      * Called by Location Services when the request to connect the
@@ -269,7 +193,6 @@ public class BackgroundLocationService extends Service implements
         //Intent intent = new Intent(this, LocationReceiver.class);
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,
                 mLocationRequest, this); // This is the changed line.
-        //appendLog(DateFormat.getDateTimeInstance().format(new Date()) + ": Connected", Constants.LOG_FILE);
 //        PendingIntent pendingIntent = PendingIntent
 //                .getBroadcast(this, 54321, intent, PendingIntent.FLAG_CANCEL_CURRENT);
 //        LocationServices.FusedLocationApi.requestLocationUpdates(this.mGoogleApiClient,
@@ -284,13 +207,8 @@ public class BackgroundLocationService extends Service implements
     @Override
     public void onConnectionSuspended(int i) {
         Log.e(TAG, "onConnectionSuspended.... is called..");
-        // Turn off the request flag
-        mInProgress = false;
         // Destroy the current location client
         mGoogleApiClient = null;
-        // Display the connection status
-        // Toast.makeText(this, DateFormat.getDateTimeInstance().format(new Date()) + ": Disconnected. Please re-connect.", Toast.LENGTH_SHORT).show();
-        //appendLog(DateFormat.getDateTimeInstance().format(new Date()) + ": Disconnected", Constants.LOG_FILE);
     }
 
     /*
@@ -300,20 +218,6 @@ public class BackgroundLocationService extends Service implements
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.e(TAG, "onConnectionFailed.... is called..");
-        mInProgress = false;
-
-        /*
-         * Google Play services can resolve some errors it detects.
-         * If the error has a resolution, try sending an Intent to
-         * start a Google Play services activity that can resolve
-         * error.
-         */
-        if (connectionResult.hasResolution()) {
-
-            // If no resolution is available, display an error dialog
-        } else {
-
-        }
     }
 
     private Notification getNotification() {
